@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: routeforge_test
+          POSTGRES_USER: routeforge
+          POSTGRES_PASSWORD: routeforge_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run central validation
+        run: uv run python scripts/validate.py
+
+      - name: Run PostgreSQL integration validation
+        env:
+          ROUTEFORGE_TEST_DATABASE_URL: postgresql+asyncpg://routeforge:routeforge_pass@localhost:5432/routeforge_test
+        run: uv run python scripts/validate_integration.py

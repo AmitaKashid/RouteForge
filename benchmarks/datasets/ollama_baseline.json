@@ -1,0 +1,120 @@
+[
+  {
+    "case_id": "qa-01",
+    "category": "short_qa",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "What is the capital city of France?"
+      }
+    ]
+  },
+  {
+    "case_id": "qa-02",
+    "category": "short_qa",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "What chemical element has the symbol 'Fe'?"
+      }
+    ]
+  },
+  {
+    "case_id": "classify-01",
+    "category": "classification",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "Classify the sentiment of this review as POSITIVE, NEGATIVE, or NEUTRAL: 'The battery life is disappointing and the screen flickers constantly.'"
+      }
+    ]
+  },
+  {
+    "case_id": "extract-01",
+    "category": "structured_extraction",
+    "output_format": "JSON",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "Extract the person's name and age from this text as JSON with keys 'name' and 'age': Alice Smith is a 29-year-old software engineer."
+      }
+    ]
+  },
+  {
+    "case_id": "extract-02",
+    "category": "structured_extraction",
+    "output_format": "JSON",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "Extract the product name and price from this text as JSON with keys 'product' and 'price': The Wireless Headset is on sale for $49.99."
+      }
+    ]
+  },
+  {
+    "case_id": "summary-01",
+    "category": "summarization",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "Summarize the following passage in one sentence:\nRouteForge is an LLM gateway that routes requests across models based on quality, latency, cost, and policy constraints. It provides deterministic selection and fallback semantics for high availability."
+      }
+    ]
+  },
+  {
+    "case_id": "summary-02",
+    "category": "summarization",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "Summarize in one sentence:\nPython is a high-level interpreted programming language known for readable syntax and rich ecosystem for data science and web development."
+      }
+    ]
+  },
+  {
+    "case_id": "grounded-01",
+    "category": "grounded_qa",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "SYSTEM",
+        "content": "Use ONLY the provided context to answer the question."
+      },
+      {
+        "role": "USER",
+        "content": "Context: Project Alpha reached milestone M2 on August 6, 2026. Project Beta will start on September 1, 2026.\nQuestion: When did Project Alpha reach milestone M2?"
+      }
+    ]
+  },
+  {
+    "case_id": "grounded-02",
+    "category": "grounded_qa",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "SYSTEM",
+        "content": "Use ONLY the provided context to answer the question."
+      },
+      {
+        "role": "USER",
+        "content": "Context: Server cluster East-1 has 64 nodes operating at 80% capacity.\nQuestion: How many nodes are in server cluster East-1?"
+      }
+    ]
+  },
+  {
+    "case_id": "reasoning-01",
+    "category": "simple_reasoning",
+    "output_format": "TEXT",
+    "messages": [
+      {
+        "role": "USER",
+        "content": "If a train leaves Station A at 60 mph and travels for 2.5 hours without stopping, how many miles does it cover?"
+      }
+    ]
+  }
+]

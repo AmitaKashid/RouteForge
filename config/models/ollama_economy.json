@@ -1,0 +1,28 @@
+{
+  "model_id": "ollama-economy",
+  "provider_id": "ollama",
+  "display_name": "Ollama Economy Model",
+  "capabilities": [
+    "TEXT_CHAT"
+  ],
+  "governance_allowed": [
+    "PUBLIC",
+    "INTERNAL",
+    "CONFIDENTIAL",
+    "RESTRICTED"
+  ],
+  "context_window_tokens": 8192,
+  "estimated_input_cost_per_million_tokens_usd": "0.100000",
+  "estimated_output_cost_per_million_tokens_usd": "0.200000",
+  "estimated_latency_ms": 150,
+  "quality_profiles": [
+    {
+      "task_type": "general",
+      "predicted_quality": 0.70,
+      "source": "configured-local-cost-v1",
+      "version": "v1"
+    }
+  ],
+  "enabled": true,
+  "configuration_version": "v1"
+}

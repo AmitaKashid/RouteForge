@@ -1,0 +1,31 @@
+{
+  "model_id": "mock-premium",
+  "provider_id": "mock",
+  "display_name": "Mock Premium Model",
+  "capabilities": [
+    "TEXT_CHAT",
+    "STRUCTURED_OUTPUT",
+    "LONG_CONTEXT",
+    "REASONING"
+  ],
+  "governance_allowed": [
+    "PUBLIC",
+    "INTERNAL",
+    "CONFIDENTIAL",
+    "RESTRICTED"
+  ],
+  "context_window_tokens": 128000,
+  "estimated_input_cost_per_million_tokens_usd": "2.500000",
+  "estimated_output_cost_per_million_tokens_usd": "10.000000",
+  "estimated_latency_ms": 600,
+  "quality_profiles": [
+    {
+      "task_type": "general",
+      "predicted_quality": 0.95,
+      "source": "deterministic-fixture",
+      "version": "fixture-v1"
+    }
+  ],
+  "enabled": true,
+  "configuration_version": "fixture-v1"
+}

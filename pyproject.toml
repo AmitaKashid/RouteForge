@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "routeforge"
+version = "0.1.0"
+description = "Quality-aware multi-provider LLM gateway"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.13.0",
+    "asyncpg>=0.29.0",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "pydantic>=2.13.4",
+    "redis>=5.0.0",
+    "sqlalchemy>=2.0.0",
+    "uvicorn>=0.52.1",
+]
+
+[project.scripts]
+routeforge = "routeforge.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/routeforge"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "RUF", # Ruff-specific rules
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests", "scripts"]
+show_error_codes = true
+pretty = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+strict_config = true
+strict_markers = true
+addopts = "-ra --cov=routeforge --cov-report=term-missing --cov-fail-under=90"
+
+[tool.coverage.run]
+source = ["routeforge"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

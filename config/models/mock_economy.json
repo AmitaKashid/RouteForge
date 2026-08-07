@@ -1,0 +1,28 @@
+{
+  "model_id": "mock-economy",
+  "provider_id": "mock",
+  "display_name": "Mock Economy Model",
+  "capabilities": [
+    "TEXT_CHAT"
+  ],
+  "governance_allowed": [
+    "PUBLIC",
+    "INTERNAL",
+    "CONFIDENTIAL",
+    "RESTRICTED"
+  ],
+  "context_window_tokens": 4096,
+  "estimated_input_cost_per_million_tokens_usd": "0.100000",
+  "estimated_output_cost_per_million_tokens_usd": "0.200000",
+  "estimated_latency_ms": 200,
+  "quality_profiles": [
+    {
+      "task_type": "general",
+      "predicted_quality": 0.75,
+      "source": "deterministic-fixture",
+      "version": "fixture-v1"
+    }
+  ],
+  "enabled": true,
+  "configuration_version": "fixture-v1"
+}

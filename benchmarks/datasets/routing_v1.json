@@ -1,0 +1,352 @@
+[
+  {
+    "case_id": "cls-01",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "POSITIVE",
+    "messages": [
+      {"role": "SYSTEM", "content": "Respond with ONLY one word: POSITIVE, NEGATIVE, or NEUTRAL."},
+      {"role": "USER", "content": "The application performance is outstanding and load times are blazing fast!"}
+    ]
+  },
+  {
+    "case_id": "cls-02",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "NEGATIVE",
+    "messages": [
+      {"role": "SYSTEM", "content": "Respond with ONLY one word: POSITIVE, NEGATIVE, or NEUTRAL."},
+      {"role": "USER", "content": "The database crashed three times today and data was lost."}
+    ]
+  },
+  {
+    "case_id": "cls-03",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "NEUTRAL",
+    "messages": [
+      {"role": "SYSTEM", "content": "Respond with ONLY one word: POSITIVE, NEGATIVE, or NEUTRAL."},
+      {"role": "USER", "content": "The quarterly financial report was published on Tuesday at 9 AM."}
+    ]
+  },
+  {
+    "case_id": "cls-04",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "HIGH",
+    "messages": [
+      {"role": "SYSTEM", "content": "Classify priority as HIGH, MEDIUM, or LOW. Respond with ONLY the label."},
+      {"role": "USER", "content": "Production gateway is completely down returning 500 errors to all customers."}
+    ]
+  },
+  {
+    "case_id": "cls-05",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "LOW",
+    "messages": [
+      {"role": "SYSTEM", "content": "Classify priority as HIGH, MEDIUM, or LOW. Respond with ONLY the label."},
+      {"role": "USER", "content": "Typo found in footer disclaimer text on marketing landing page."}
+    ]
+  },
+  {
+    "case_id": "cls-06",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "SPAM",
+    "messages": [
+      {"role": "SYSTEM", "content": "Classify message as SPAM or HAM. Respond with ONLY the label."},
+      {"role": "USER", "content": "CONGRATULATIONS! You won $10,000,000! Click here immediately to claim your cash bonus!"}
+    ]
+  },
+  {
+    "case_id": "ext-01",
+    "task_type": "structured-extraction",
+    "output_format": "JSON",
+    "expected_fields": ["name", "age", "city"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Extract details into JSON with keys 'name', 'age', 'city'."},
+      {"role": "USER", "content": "Marcus Vance is a 34-year-old architect living in Seattle."}
+    ]
+  },
+  {
+    "case_id": "ext-02",
+    "task_type": "structured-extraction",
+    "output_format": "JSON",
+    "expected_fields": ["product", "price", "currency"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Extract details into JSON with keys 'product', 'price', 'currency'."},
+      {"role": "USER", "content": "The UltraSound Noise Canceling Headphones are priced at 299 USD."}
+    ]
+  },
+  {
+    "case_id": "ext-03",
+    "task_type": "structured-extraction",
+    "output_format": "JSON",
+    "expected_fields": ["status_code", "error_type", "timestamp"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Extract error log attributes into JSON with keys 'status_code', 'error_type', 'timestamp'."},
+      {"role": "USER", "content": "[2026-08-06T14:22:00Z] HTTP 504 GatewayTimeoutError on /v1/chat/completions"}
+    ]
+  },
+  {
+    "case_id": "ext-04",
+    "task_type": "structured-extraction",
+    "output_format": "JSON",
+    "expected_fields": ["sender", "recipient", "amount"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Extract wire transfer into JSON with keys 'sender', 'recipient', 'amount'."},
+      {"role": "USER", "content": "Acme Corp transferred $50,000.00 to Beta Holdings."}
+    ]
+  },
+  {
+    "case_id": "ext-05",
+    "task_type": "structured-extraction",
+    "output_format": "JSON",
+    "expected_fields": ["language", "framework", "version"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Extract technical details into JSON with keys 'language', 'framework', 'version'."},
+      {"role": "USER", "content": "The service is built with Python 3.12 using FastAPI version 0.141."}
+    ]
+  },
+  {
+    "case_id": "json-01",
+    "task_type": "json-generation",
+    "output_format": "JSON",
+    "expected_fields": ["user_id", "email", "active"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Return valid JSON representing a user with keys 'user_id', 'email', 'active'."},
+      {"role": "USER", "content": "Create user object for admin@routeforge.ai ID 101 status active."}
+    ]
+  },
+  {
+    "case_id": "json-02",
+    "task_type": "json-generation",
+    "output_format": "JSON",
+    "expected_fields": ["server_name", "ip_address", "port"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Return valid JSON representing server config with keys 'server_name', 'ip_address', 'port'."},
+      {"role": "USER", "content": "Server web-node-01 IP 192.168.1.50 port 8000."}
+    ]
+  },
+  {
+    "case_id": "json-03",
+    "task_type": "json-generation",
+    "output_format": "JSON",
+    "expected_fields": ["title", "author", "year"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Return valid JSON representing a book with keys 'title', 'author', 'year'."},
+      {"role": "USER", "content": "Book: Designing Data-Intensive Applications by Martin Kleppmann published in 2017."}
+    ]
+  },
+  {
+    "case_id": "json-04",
+    "task_type": "json-generation",
+    "output_format": "JSON",
+    "expected_fields": ["metric", "value", "unit"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Return valid JSON with keys 'metric', 'value', 'unit'."},
+      {"role": "USER", "content": "Latency measurement 42 milliseconds."}
+    ]
+  },
+  {
+    "case_id": "sum-01",
+    "task_type": "summarization",
+    "output_format": "TEXT",
+    "required_phrases": ["RouteForge", "LLM gateway", "routing"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Summarize in one sentence mentioning key entities."},
+      {"role": "USER", "content": "RouteForge is an open-source quality-aware LLM gateway that routes requests dynamically across multiple model providers based on quality, latency, and cost."}
+    ]
+  },
+  {
+    "case_id": "sum-02",
+    "task_type": "summarization",
+    "output_format": "TEXT",
+    "required_phrases": ["FastAPI", "Python", "web"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Summarize in one sentence mentioning key technical terms."},
+      {"role": "USER", "content": "FastAPI is a modern high-performance web framework for building APIs with Python 3.8+ based on standard Python type hints."}
+    ]
+  },
+  {
+    "case_id": "sum-03",
+    "task_type": "summarization",
+    "output_format": "TEXT",
+    "required_phrases": ["PostgreSQL", "database", "relational"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Summarize in one sentence."},
+      {"role": "USER", "content": "PostgreSQL is an advanced open-source relational database management system emphasizing extensibility and SQL compliance."}
+    ]
+  },
+  {
+    "case_id": "sum-04",
+    "task_type": "summarization",
+    "output_format": "TEXT",
+    "required_phrases": ["Redis", "in-memory", "cache"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Summarize in one sentence."},
+      {"role": "USER", "content": "Redis is an in-memory data structure store used as a distributed cache, message broker, and database."}
+    ]
+  },
+  {
+    "case_id": "sum-05",
+    "task_type": "summarization",
+    "output_format": "TEXT",
+    "required_phrases": ["Docker", "containers"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Summarize in one sentence."},
+      {"role": "USER", "content": "Docker is a platform for developing, shipping, and running applications inside isolated lightweight containers."}
+    ]
+  },
+  {
+    "case_id": "gqa-01",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "August 6, 2026",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context. State the date exactly as written in context."},
+      {"role": "USER", "content": "Context: Milestone M2 was achieved on August 6, 2026.\nQuestion: When was Milestone M2 achieved?"}
+    ]
+  },
+  {
+    "case_id": "gqa-02",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "42 milliseconds",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context. State the latency value."},
+      {"role": "USER", "content": "Context: The system SLA targets a p95 latency of 42 milliseconds.\nQuestion: What is the target p95 latency?"}
+    ]
+  },
+  {
+    "case_id": "gqa-03",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "100,000 USD",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context. State the budget amount."},
+      {"role": "USER", "content": "Context: Team Bravo has an annual budget ceiling of 100,000 USD.\nQuestion: What is Team Bravo's budget ceiling?"}
+    ]
+  },
+  {
+    "case_id": "gqa-04",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "HEALTHY",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context. State the health status."},
+      {"role": "USER", "content": "Context: Node US-East-1 status is reported as HEALTHY.\nQuestion: What is the status of US-East-1?"}
+    ]
+  },
+  {
+    "case_id": "gqa-05",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "11434",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context. State the port number."},
+      {"role": "USER", "content": "Context: Ollama service listens on port 11434.\nQuestion: Which port does Ollama listen on?"}
+    ]
+  },
+  {
+    "case_id": "rsn-01",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "150",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "If a car travels at 50 miles per hour for 3 hours, how many miles does it travel?"}
+    ]
+  },
+  {
+    "case_id": "rsn-02",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "15",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "A box contains 5 red balls and 10 blue balls. What is the total number of balls in the box?"}
+    ]
+  },
+  {
+    "case_id": "rsn-03",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "24",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "What is 12 multiplied by 2?"}
+    ]
+  },
+  {
+    "case_id": "rsn-04",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "300",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "What is 150 plus 150?"}
+    ]
+  },
+  {
+    "case_id": "rsn-05",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "7",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "How many days are in one week?"}
+    ]
+  },
+  {
+    "case_id": "cls-07",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "BUG",
+    "messages": [
+      {"role": "SYSTEM", "content": "Classify issue type as BUG, FEATURE, or QUESTION. Respond with ONLY the label."},
+      {"role": "USER", "content": "Clicking the submit button triggers a NullPointerException on line 42."}
+    ]
+  },
+  {
+    "case_id": "cls-08",
+    "task_type": "classification",
+    "output_format": "TEXT",
+    "expected_answer": "FEATURE",
+    "messages": [
+      {"role": "SYSTEM", "content": "Classify issue type as BUG, FEATURE, or QUESTION. Respond with ONLY the label."},
+      {"role": "USER", "content": "Please add support for exporting user audit reports to CSV format."}
+    ]
+  },
+  {
+    "case_id": "json-05",
+    "task_type": "json-generation",
+    "output_format": "JSON",
+    "expected_fields": ["status", "count"],
+    "messages": [
+      {"role": "SYSTEM", "content": "Return valid JSON with keys 'status' and 'count'."},
+      {"role": "USER", "content": "Status ok count 5."}
+    ]
+  },
+  {
+    "case_id": "gqa-06",
+    "task_type": "grounded-qa",
+    "output_format": "TEXT",
+    "expected_answer": "Python 3.12",
+    "messages": [
+      {"role": "SYSTEM", "content": "Use ONLY the provided context."},
+      {"role": "USER", "content": "Context: RouteForge is written in Python 3.12.\nQuestion: What Python version is RouteForge written in?"}
+    ]
+  },
+  {
+    "case_id": "rsn-06",
+    "task_type": "reasoning",
+    "output_format": "TEXT",
+    "expected_answer": "100",
+    "messages": [
+      {"role": "SYSTEM", "content": "State ONLY the final numerical answer."},
+      {"role": "USER", "content": "What is 10 squared?"}
+    ]
+  }
+]

@@ -1,0 +1,148 @@
+{
+  "profile_version": "routing-profile-v1",
+  "created_at": "2026-08-06T19:42:43.753488+00:00",
+  "profiles": {
+    "ollama-economy": {
+      "model_id": "ollama-economy",
+      "task_profiles": {
+        "classification": {
+          "task_type": "classification",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 8,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "structured-extraction": {
+          "task_type": "structured-extraction",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "json-generation": {
+          "task_type": "json-generation",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "summarization": {
+          "task_type": "summarization",
+          "measured_quality": 0.2,
+          "measured_pass_rate": 0.2,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "grounded-qa": {
+          "task_type": "grounded-qa",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 6,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "reasoning": {
+          "task_type": "reasoning",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 120,
+          "measured_p95_latency_ms": 120,
+          "sample_count": 6,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        }
+      }
+    },
+    "ollama-quality": {
+      "model_id": "ollama-quality",
+      "task_profiles": {
+        "classification": {
+          "task_type": "classification",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 8,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "structured-extraction": {
+          "task_type": "structured-extraction",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "json-generation": {
+          "task_type": "json-generation",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "summarization": {
+          "task_type": "summarization",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 5,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "grounded-qa": {
+          "task_type": "grounded-qa",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 6,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        },
+        "reasoning": {
+          "task_type": "reasoning",
+          "measured_quality": 1.0,
+          "measured_pass_rate": 1.0,
+          "measured_median_latency_ms": 280,
+          "measured_p95_latency_ms": 280,
+          "sample_count": 6,
+          "benchmark_dataset_version": "routing_v1",
+          "evaluator_version": "v1",
+          "source_benchmark_file": "two-model-baseline.jsonl"
+        }
+      }
+    }
+  }
+}
