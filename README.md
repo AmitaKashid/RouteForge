@@ -1,217 +1,565 @@
 # RouteForge
 
-RouteForge is a quality-aware multi-provider LLM gateway designed to route requests dynamically across eligible language models based on quality, latency, cost, reliability, governance, and feature-policy constraints. It provides an OpenAI-compatible interface backed by deterministic routing policies and multi-provider failover mechanics.
+**Cost- and Quality-Aware Multi-Provider LLM Gateway**
 
-## Current Development Status
+RouteForge is an LLM control plane that sits between applications and language-model providers. Instead of letting each application choose a model directly, RouteForge evaluates each request against **quality, latency, cost, governance, availability, and feature-policy constraints**, selects the lowest-cost eligible model, executes it through a normalized provider interface, and records the decision for audit and cost accounting.
 
-RouteForge is currently in early active development (Milestone M1 — Repository Foundation and Deterministic Routing Skeleton). The foundational package layout, strict static typing environment, linting rules, typed core domain contracts, configuration-backed registries, deterministic mock provider, candidate eligibility evaluator, deterministic routing policy, architecture documentation, ADRs, and central validation workflows are established. Real cloud provider integrations and live gateway endpoints are planned for subsequent V1 milestones.
+The project addresses a production problem: once multiple teams and models share the same inference infrastructure, model selection stops being a simple API call. It becomes an operational decision involving **cost control, reliability, tenant limits, provider health, and quality assurance**.
 
-## Architecture & Decision Documentation
+> **Current status:** active development. The repository already contains deterministic routing, a FastAPI gateway, mock and Ollama execution, PostgreSQL-backed audit and budget state, Redis-backed rate limiting and circuit state, retry/fallback behavior, and sampled asynchronous quality verification. Shadow-policy evaluation and the final observability/load-testing milestone remain.
 
-* [Architecture Overview](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/architecture/overview.md) — Implemented M1 architecture, limitations, and design principles.
-* [Current Request Flow](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/architecture/current-request-flow.md) — Step-by-step candidate evaluation and routing flow diagram.
-* [Module Boundaries](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/architecture/module-boundaries.md) — Responsibilities and forbidden dependencies across package boundaries.
-* [Control-Plane & Data-Plane Separation](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/architecture/control-plane-data-plane.md) — Rationale for logical plane isolation inside a modular monolith.
-* [V1 Target Architecture](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/architecture/v1-target-architecture.md) — Planned end-to-end V1 pipeline and target infrastructure.
-* [Architecture Decision Records (ADRs)](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/decisions/README.md) — Index of project ADRs (ADR-001 through ADR-008).
+---
 
-## Milestone 1 Demonstration
+## What RouteForge Solves
 
-RouteForge includes a credential-free CLI command interface for demonstrating deterministic candidate eligibility, lowest-cost model selection, and mock provider execution across pre-estimated candidate models.
+A typical LLM application starts with one provider and one model. That works initially, but creates predictable problems as usage grows:
 
-```bash
-# 1. General Chat (cheapest eligible model selected)
-uv run routeforge demo examples/m1/general-chat.json --pretty
+- expensive models are used for requests cheaper models could handle;
+- teams lack centralized budget and rate-limit enforcement;
+- provider outages propagate directly to users;
+- routing decisions are difficult to explain after the fact;
+- quality can silently degrade when cheaper models are introduced;
+- every application team reimplements the same reliability and governance logic.
 
-# 2. Constrained Routing (higher-quality model selected over cheaper ineligible candidate)
-uv run routeforge demo examples/m1/constrained-routing.json --pretty
+RouteForge centralizes these concerns at the gateway boundary.
 
-# 3. No Eligible Model (all candidates rejected, exit code 2)
-uv run routeforge demo examples/m1/no-eligible-model.json --pretty
+For each request, the gateway answers:
+
+1. **Which models are allowed for this feature and governance context?**
+2. **Which candidates satisfy the requested quality, latency, and cost limits?**
+3. **Which eligible candidate has the lowest estimated cost?**
+4. **Is the selected provider-model pair healthy enough to use?**
+5. **Can the authenticated team admit and afford the request?**
+6. **If execution fails, can RouteForge retry or fall back without weakening constraints?**
+7. **Should the completed response be sampled for asynchronous quality verification?**
+
+The result is a routing decision that is **deterministic, explainable, and auditable**.
+
+---
+
+## Core Capabilities
+
+| Capability | What RouteForge does | Why it matters |
+| --- | --- | --- |
+| **Policy-aware routing** | Filters models by feature policy, request constraints, capabilities, governance, quality, latency, cost, and provider state | Cost optimization never bypasses product or governance requirements |
+| **Deterministic selection** | Chooses the lowest-cost eligible candidate with stable tie-breaking | Routing behavior stays reproducible and testable |
+| **Provider abstraction** | Normalizes model execution behind a common provider contract | Routing logic stays independent of provider-specific APIs |
+| **Measured model profiles** | Builds versioned routing profiles from repeatable offline benchmarks | Runtime routing can be backed by evidence rather than arbitrary constants |
+| **Team authentication** | Resolves team identity from Bearer API keys and stores only key digests | Establishes tenant identity without persisting recoverable secrets |
+| **Rate limiting** | Uses Redis for per-team request and estimated-token limits | Protects shared inference capacity |
+| **Budget enforcement** | Uses PostgreSQL for monthly budgets, cost reservation, and reconciliation | Makes economic controls durable and concurrency-safe |
+| **Retry and fallback** | Retries bounded transient failures and re-routes when policy allows | Improves resilience without silently relaxing constraints |
+| **Circuit breaking** | Tracks passive `CLOSED`, `OPEN`, and `HALF_OPEN` state per provider-model pair | Stops repeatedly failing backends from receiving normal traffic |
+| **Inference audit trail** | Records candidates, selection, token usage, latency, cost, retries, fallback, and execution attempts | Makes routing decisions inspectable |
+| **Async quality verification** | Samples completed requests and compares them with a fixed reference model outside the response path | Measures whether cheaper routing preserves quality |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    C[Client Application] --> API[FastAPI Gateway]
+
+    API --> AUTH[Team Authentication]
+    AUTH --> RL[Redis Rate Limits]
+    RL --> REG[Model + Policy Registries]
+    REG --> ROUTER[Deterministic Router]
+
+    ROUTER --> CIRCUIT[Redis Circuit State]
+    CIRCUIT --> ROUTER
+    ROUTER --> BUDGET[PostgreSQL Budget Reservation]
+
+    BUDGET --> EXEC[Inference Coordinator]
+    EXEC --> MOCK[Deterministic Mock Provider]
+    EXEC --> OLLAMA[Ollama Provider]
+
+    EXEC --> RETRY[Bounded Retry / Fallback]
+    RETRY --> EXEC
+
+    EXEC --> LEDGER[(PostgreSQL Inference Ledger)]
+    EXEC --> RESP[Normalized Chat Completion]
+    RESP --> C
+
+    EXEC --> SAMPLE{Verification Sample?}
+    SAMPLE -->|yes| STREAM[(Redis Stream)]
+    STREAM --> WORKER[Verification Worker]
+    WORKER --> REF[Reference Model]
+    REF --> VERIFY[(PostgreSQL Quality Verification)]
 ```
 
-Note:
-* All candidate quality ratings, latencies, and costs in demonstration scenarios are explicit deterministic fixtures, not live cloud measurements.
-* The mock provider uses no network access or paid API credentials.
-* The demonstration CLI is an isolated CLI wrapper for testing and validation; it is not the future HTTP gateway.
-* Scenarios with no eligible models exit with code `2` and produce a complete decision audit record.
-* Provider execution can be skipped using `--route-only`.
+### Durable vs. transient state
 
-## Gateway Development
+| State | Storage | Rationale |
+| --- | --- | --- |
+| Teams, API-key digests, limits, budgets, inference records, verification results | **PostgreSQL** | Must survive restarts and remain auditable |
+| Rate counters, circuit state, probe locks, verification queue | **Redis** | High-frequency transient operational state |
+| Model definitions and routing policies | **Versioned JSON** | Reviewable in Git and deterministic to load |
+| Measured routing profiles | **Versioned offline-generated files** | Prevents runtime self-modification of evidence |
 
-RouteForge provides a FastAPI HTTP gateway application factory (`create_app`) and OpenAPI documentation.
+A central architectural rule is that the **routing engine remains pure**. It does not query PostgreSQL, inspect Redis, or call providers. Infrastructure state is resolved by the application layer and supplied to the router as explicit inputs.
 
-```powershell
-# Sync dependencies
+---
+
+## Request Lifecycle
+
+A successful request follows this sequence:
+
+```text
+1. Authenticate the team
+2. Apply request and token rate limits
+3. Resolve the active feature policy
+4. Load permitted model definitions
+5. Read provider-model circuit state
+6. Build candidate quality, latency, and cost estimates
+7. Evaluate candidate eligibility
+8. Select the lowest-cost eligible model
+9. Reserve estimated cost against the team budget
+10. Execute the selected provider-model pair
+11. Retry bounded transient failures when permitted
+12. Re-route to another eligible candidate if fallback is allowed
+13. Reconcile reserved cost against actual token usage
+14. Persist the routing and execution audit record
+15. Return the normalized response
+16. Optionally enqueue asynchronous quality verification
+```
+
+Fallback is not a hardcoded backup. RouteForge performs another constrained routing decision with the failed provider-model pair excluded. If no remaining candidate satisfies the original requirements, the request fails rather than silently weakening policy.
+
+---
+
+## Routing Model
+
+RouteForge separates **eligibility** from **selection**.
+
+A candidate can be rejected because of:
+
+- feature-policy restrictions;
+- missing capabilities;
+- minimum quality requirements;
+- maximum latency requirements;
+- maximum estimated request cost;
+- governance restrictions;
+- provider operating state;
+- explicit model pinning.
+
+Only candidates that survive all checks are eligible.
+
+Among eligible candidates, RouteForge selects the one with the lowest estimated cost. Equal-cost candidates are resolved deterministically by model ID.
+
+> **Cost optimization happens only inside the safe set of eligible models.**
+
+---
+
+## Reliability Semantics
+
+### Retryable failures
+
+Examples:
+
+- provider timeout;
+- rate limiting;
+- connection failure;
+- transient provider unavailability.
+
+These failures may receive a bounded retry with exponential backoff. After retry exhaustion, the router may select another eligible candidate if fallback is enabled.
+
+### Non-retryable failures
+
+Examples:
+
+- authentication failure;
+- invalid provider request;
+- unsupported model;
+- malformed provider response;
+- domain or policy violations.
+
+These stop execution. RouteForge does not hide invalid requests or configuration defects by trying unrelated models.
+
+### Circuit breaker
+
+Circuit state is maintained independently for each `(provider, model)` pair.
+
+| State | Routing meaning | Behavior |
+| --- | --- | --- |
+| `CLOSED` | Healthy | Receives normal traffic |
+| `OPEN` | Unavailable | Rejected before execution |
+| `HALF_OPEN` | Degraded | One controlled recovery probe may test the pair |
+
+The health signal is passive: normal inference outcomes update the circuit. V1 does not require a separate provider-polling service.
+
+---
+
+## Quality Verification
+
+Cost-aware routing is useful only if quality remains acceptable. RouteForge therefore treats routing quality as something to **measure**, not assume.
+
+For deterministic feature types, a configured percentage of successful requests can be sampled after the user-facing response is complete. Sampling is deterministic: request and policy identifiers are hashed into a stable basis-point bucket.
+
+A sampled verification job is placed on a Redis Stream. A background worker calls a fixed reference model and stores the comparison result in PostgreSQL.
+
+Current deterministic comparison strategies include:
+
+- **`NORMALIZED_EXACT`** — suited to classification and short deterministic answers;
+- **`JSON_FIELD_AGREEMENT`** — compares structured JSON leaf fields using stable semantics.
+
+A quality disagreement is stored as a completed verification with `passed = false`; it is not treated as an infrastructure failure.
+
+Verification is currently **observational only**. It does not automatically:
+
+- alter the response already returned to the user;
+- retrain the router;
+- rewrite model profiles;
+- activate another policy;
+- trigger automatic rollback.
+
+---
+
+## Technology Choices
+
+| Component | Tool / Library | Why this choice |
+| --- | --- | --- |
+| Language | **Python 3.12** | Strong async and AI-infrastructure ecosystem |
+| API | **FastAPI + Pydantic** | Typed request boundaries, async serving, generated OpenAPI |
+| Provider HTTP | **HTTPX** | Async transport with explicit lifecycle and testable mocks |
+| Local inference | **Ollama** | Real local model execution without paid cloud credentials |
+| Durable state | **PostgreSQL** | Transactional source of truth for teams, budgets, audit data, and verification |
+| ORM / migrations | **SQLAlchemy 2.x + Alembic** | Async persistence and versioned schema evolution |
+| Transient state | **Redis** | Atomic rate counters, circuit state, locks, and stream-based jobs |
+| Money arithmetic | **`Decimal`** | Avoids binary floating-point errors in cost accounting |
+| Packaging | **uv + Hatchling** | Reproducible Python dependency management |
+| Quality gates | **Ruff + mypy + pytest** | Formatting, linting, strict typing, and automated tests |
+
+---
+
+## API Surface
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/chat/completions` | Authenticated OpenAI-style inference request routed by RouteForge |
+| `GET /healthz` | Process liveness |
+| `GET /readyz` | Runtime dependency readiness |
+| `GET /v1/routing-decisions/{request_id}` | Routing, execution, cost, retry/fallback, and verification audit |
+| `GET /v1/usage` | Current-month team usage |
+| `GET /v1/costs` | Current-month cost and budget state |
+| `GET /v1/quality-summary` | Current-month asynchronous verification statistics |
+| `/docs` | Swagger UI |
+| `/openapi.json` | OpenAPI schema |
+
+### Example request
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer <ROUTEFORGE_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "routeforge",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain why deterministic routing is useful in an LLM gateway."
+      }
+    ],
+    "stream": false,
+    "routeforge": {
+      "feature_id": "general-chat",
+      "minimum_quality": 0.75,
+      "maximum_latency_ms": 2000,
+      "maximum_estimated_cost_usd": "0.01",
+      "required_governance": "internal"
+    }
+  }'
+```
+
+The client addresses the virtual model `routeforge`; RouteForge chooses the actual backend.
+
+---
+
+## Local Development
+
+### Requirements
+
+- Python `3.12`
+- [`uv`](https://docs.astral.sh/uv/)
+- PostgreSQL
+- Redis
+- Docker for local infrastructure
+- Ollama only when exercising real local model execution
+
+### Install dependencies
+
+```bash
 uv sync --locked
+```
 
-# Start development gateway server using Uvicorn application factory mode
+### Start the gateway
+
+```bash
 uv run uvicorn routeforge.gateway.app:create_app --factory --reload
 ```
 
-Gateway endpoints & documentation:
-* Health Status Endpoint: `GET http://localhost:8000/healthz`
-* Swagger UI Documentation: `http://localhost:8000/docs`
-* OpenAPI JSON Schema: `http://localhost:8000/openapi.json`
-* ReDoc Documentation: `http://localhost:8000/redoc`
+### Start PostgreSQL
 
-Note:
-* The HTTP inference endpoint `POST /v1/chat/completions` is fully functional using deterministic candidate estimation, deterministic policy routing, and `DeterministicMockProvider` attempt execution.
-* Authentication is not yet implemented; request context uses the fixed development team identity `local-development`.
-* Candidate estimates are calculated by a deterministic gateway estimator, not measured production models.
-* The CLI demonstration (`uv run routeforge demo ...`) remains available.
+```bash
+docker compose -f deploy/docker-compose/postgres.yml up -d
+uv run alembic upgrade head
+```
 
-## Deterministic Selection & Request Routing
+Default development database:
 
-RouteForge evaluates multiple pre-estimated candidate models (`route_request`) against policy and request constraints, selecting the lowest-cost eligible model deterministically. Equal-cost candidates are resolved predictably by model ID. Routing currently stops after producing the decision record prior to provider execution. Metric estimates remain deterministic fixtures in M1.
+```text
+postgresql+asyncpg://routeforge:routeforge_pass@localhost:5432/routeforge_dev
+```
 
-## Candidate Eligibility Evaluation
+Override with:
 
-RouteForge can evaluate individual candidate models against feature policy and request-level constraints (`evaluate_candidate`). Candidate eligibility evaluates model permission, capabilities, minimum quality thresholds, latency targets, cost budgets, governance sensitivity, and provider operating state. Evaluating eligibility does not yet select a winning candidate or execute a provider. Quality, latency, and cost inputs remain deterministic fixtures at this stage.
+```text
+ROUTEFORGE_DATABASE_URL
+```
 
-## Provider Execution
+### Create a development team and API key
 
-RouteForge includes a deterministic, credential-free mock provider (`DeterministicMockProvider`) for tests and local development, as well as an `OllamaProvider` adapter for direct local model execution.
+```bash
+uv run python scripts/create_development_team.py \
+  --team-id team-dev \
+  --name "Development Team"
+```
 
-### Ollama Provider Adapter & Baseline Tools
+The plaintext API key is shown once. RouteForge stores its SHA-256 digest rather than the recoverable secret.
 
-The `OllamaProvider` adapter enables direct asynchronous completion attempts against a local Ollama server instance.
+### Configure team limits
 
-**Prerequisites & Setup:**
-1. Install Ollama from [ollama.com](https://ollama.com) and start the local server daemon (`ollama serve` or host on `http://localhost:11434`).
-2. Pull a local model using Ollama CLI:
-   ```bash
-   ollama pull llama3.2:latest
-   ```
+```bash
+uv run python scripts/set_team_limits.py \
+  --team-id team-dev \
+  --requests-per-minute 60 \
+  --tokens-per-minute 50000 \
+  --monthly-budget-usd 25.00
+```
 
-**Ollama Tools:**
-- **Smoke Test:** Execute a single normalized request directly against Ollama:
-  ```bash
-  uv run python scripts/smoke_ollama.py --model llama3.2:latest
-  ```
-- **Baseline Benchmark:** Run the 10-case baseline dataset and record metrics:
-  ```bash
-  uv run python scripts/benchmark_ollama.py --model llama3.2:latest --output benchmarks/results/ollama-baseline.jsonl
-  ```
+---
 
-**Important Notes:**
-* RouteForge **does not auto-pull or download** Ollama models automatically.
-* Automatic HTTP gateway routing (`POST /v1/chat/completions`) **still uses the mock-backed development path** in M3.1.
-* Semantic caching remains deferred and explicitly out of scope for V1.
+## Ollama Execution
 
-## Configuration Directories
+RouteForge includes an async Ollama provider adapter for real local inference.
 
-Local JSON configurations are maintained in:
+RouteForge does **not** automatically download models.
 
-* `config/models/`: Declarative JSON model definitions (e.g. `mock_economy.json`, `mock_premium.json`). Note: Current model quality ratings, latencies, and costs are deterministic test fixtures, not measured claims.
-* `config/policies/`: Declarative JSON feature routing policies (e.g. `general_chat.json`).
+### Smoke test
 
-## Planned V1 Capabilities
+```bash
+uv run python scripts/smoke_ollama.py --model llama3.2:latest
+```
 
-* **OpenAI-Compatible Gateway:** Standardized API endpoints for chat completion routing.
-* **Deterministic Policy Routing:** Multi-constraint route selection considering quality thresholds, cost budgets, and latency SLAs.
-* **Multi-Provider Execution:** Resilient adapter interfaces supporting OpenAI, Anthropic, OpenRouter, and custom providers.
-* **Durable & Transient Control Planes:** PostgreSQL for persistent policy/config management and Redis for high-frequency rate limiting and health checks.
-* **Resilience Semantics:** Automatic retries, provider fallback chains, and circuit-breaker isolation.
-* **Governance & Observability:** Team budget enforcement, rate limits, structured JSON telemetry, and OpenTelemetry instrumentation.
+### Single-model baseline
+
+```bash
+uv run python scripts/benchmark_ollama.py \
+  --model llama3.2:latest \
+  --output benchmarks/results/ollama-baseline.jsonl
+```
+
+### Two-model benchmark
+
+```bash
+uv run python scripts/benchmark_models.py \
+  --economy-model <small-model> \
+  --quality-model <strong-model> \
+  --output benchmarks/results/two-model-baseline.jsonl
+```
+
+### Build an offline routing profile
+
+```bash
+uv run python scripts/build_model_profiles.py \
+  --input benchmarks/results/two-model-baseline.jsonl \
+  --output config/profiles/routing-profile-v1.json
+```
+
+Runtime serving does not rewrite measured profiles automatically.
+
+---
+
+## Configuration
+
+```text
+config/
+├── models/       # model/provider capabilities, cost metadata, governance
+├── policies/     # feature-specific routing and resilience policy
+└── profiles/     # offline-generated quality and latency evidence
+```
+
+A feature policy can define:
+
+- allowed model IDs;
+- required capabilities;
+- minimum quality;
+- maximum latency;
+- maximum estimated cost;
+- governance ceiling;
+- degraded-provider behavior;
+- retry behavior;
+- fallback behavior;
+- optional model pinning.
+
+The router consumes these definitions; it does not hardcode model-specific business rules.
+
+---
+
+## Repository Structure
+
+```text
+RouteForge/
+├── config/
+├── benchmarks/
+├── deploy/
+├── docs/
+├── examples/
+├── scripts/
+├── src/routeforge/
+│   ├── contracts/
+│   ├── evaluation/
+│   ├── gateway/
+│   ├── providers/
+│   ├── registries/
+│   ├── resilience/
+│   ├── routing/
+│   ├── storage/
+│   └── verification/
+└── tests/
+```
+
+### Module responsibilities
+
+- `contracts/` — framework-independent domain types and policies
+- `routing/` — pure eligibility and deterministic selection logic
+- `providers/` — normalized execution adapters
+- `gateway/` — FastAPI boundary and inference coordination
+- `storage/` — PostgreSQL and Redis infrastructure
+- `resilience/` — circuit-breaker behavior
+- `evaluation/` — deterministic quality scoring and profile generation
+- `verification/` — background reference-model verification
+
+---
+
+## Key Architecture Decisions
+
+### Keep the router pure
+
+The router does not access databases, Redis, or provider clients. That keeps the core routing logic deterministic and independently testable.
+
+### Optimize cost only after eligibility
+
+The cheapest model does not automatically win. It must first satisfy policy, capability, quality, latency, governance, and provider-state requirements.
+
+### Separate durable and transient state
+
+Budgets and audit records belong in PostgreSQL. Rate counters and circuit state belong in Redis.
+
+### Treat fallback as constrained re-routing
+
+A fallback candidate must satisfy the same original request constraints. Fallback is not a privileged bypass route.
+
+### Keep quality verification off the response path
+
+Reference execution happens asynchronously so verification does not add reference-model latency to user requests.
+
+### Keep evidence separate from policy
+
+Benchmarks generate evidence. Policies make routing decisions. Runtime serving does not silently rewrite either.
+
+---
+
+## Evidence and Benchmarking Policy
+
+RouteForge does not publish a headline cost-savings number until it is backed by a reproducible benchmark against an explicit baseline.
+
+The repository includes benchmark tooling for:
+
+- model quality;
+- latency;
+- token usage;
+- routing profiles;
+- provider behavior.
+
+The final production-evidence milestone will add the complete observability stack and repeatable load testing before claims such as **cost reduction**, **quality parity**, **gateway overhead**, or **fallback success rate** are promoted in this README.
+
+Configured local-model cost equivalents are routing inputs, not provider invoices.
+
+---
+
+## Current Scope
+
+| Area | Current state |
+| --- | --- |
+| Deterministic domain contracts and routing | Implemented |
+| FastAPI chat-completion gateway | Implemented |
+| Deterministic mock provider | Implemented |
+| Ollama provider and benchmark tooling | Implemented |
+| Offline model profiles | Implemented |
+| PostgreSQL inference ledger | Implemented |
+| Team API-key authentication | Implemented |
+| Per-team rate and budget controls | Implemented |
+| Retry and constrained fallback | Implemented |
+| Redis circuit breaker | Implemented |
+| Sampled asynchronous quality verification | Implemented |
+| Shadow routing-policy evaluation | Next |
+| OpenTelemetry + Prometheus + Grafana | Final production-evidence milestone |
+| Reproducible load-test report | Final production-evidence milestone |
+
+---
 
 ## Explicit V1 Non-Goals
 
-* Semantic caching or vector database integration.
-* Fine-tuning or model training workflows.
-* GUI dashboard or frontend user interfaces.
-* Speculative decoding or custom inference engine implementations.
+RouteForge deliberately avoids absorbing every adjacent LLM-platform feature.
 
-## Local Setup
+Deferred or excluded from the core V1 scope:
 
-Ensure Python 3.12 and [`uv`](https://github.com/astral-sh/uv) are installed.
+- semantic caching;
+- streaming responses;
+- a general-purpose feature-flag platform;
+- automatic policy activation or rollback;
+- online classifier retraining;
+- reinforcement-learning routing;
+- custom web administration UI;
+- Kubernetes;
+- multi-region deployment;
+- model fine-tuning or training infrastructure.
 
-```bash
-# Sync dependencies and create virtual environment
-uv sync
+These boundaries keep the project focused on one problem:
 
-# Lock dependencies
-uv lock
-```
+> **making inference routing economically efficient, operationally resilient, and quality-aware without turning the project into several unrelated platforms.**
 
-## Validation Command
+---
 
-Run the central cross-platform validation script prior to committing code:
+## Engineering Checks
+
+Run the repository validation pipeline with:
 
 ```bash
 uv run python scripts/validate.py
 ```
 
-This executes formatting checks, linting rules, strict static type checking, configuration validation, and unit test suites sequentially.
+The project uses strict mypy configuration and a 90% pytest coverage threshold as development targets.
 
-## Measured Two-Model Ollama Routing (M3.2)
+---
 
-RouteForge supports measured two-model routing between local Ollama instances (`ollama-economy` and `ollama-quality`).
+## Documentation
 
-### Cost Equivalents
-Local Ollama models do not charge API prices. Configured cost equivalents ($0.10 input / $0.20 output per 1M tokens for `ollama-economy`; $0.50 input / $1.00 output per 1M tokens for `ollama-quality`) represent assumed infrastructure allocations for routing experiments (`source = "configured-local-cost-v1"`).
+- [Architecture Overview](docs/architecture/overview.md)
+- [Current Request Flow](docs/architecture/current-request-flow.md)
+- [Module Boundaries](docs/architecture/module-boundaries.md)
+- [Control-Plane / Data-Plane Separation](docs/architecture/control-plane-data-plane.md)
+- [V1 Target Architecture](docs/architecture/v1-target-architecture.md)
+- [Architecture Decision Records](docs/decisions/README.md)
+- [Current Repository State](docs/CURRENT_STATE.md)
+- [Milestone Roadmap](docs/ROADMAP.md)
+- [Implementation Contract](AGENTS.md)
 
-### Benchmarking & Offline Profile Generation
-1. Run the benchmark workload against two local Ollama models:
-   ```bash
-   uv run python scripts/benchmark_models.py \
-     --economy-model llama3.2:latest \
-     --quality-model llama3.2:latest \
-     --output benchmarks/results/two-model-baseline.jsonl
-   ```
+---
 
-2. Build measured versioned model profiles:
-   ```bash
-   uv run python scripts/build_model_profiles.py \
-     --input benchmarks/results/two-model-baseline.jsonl \
-     --output config/profiles/routing-profile-v1.json
-   ```
+## Project Principle
 
-### Gateway Ollama Mode Execution
-Start the gateway in Ollama runtime mode:
-```bash
-$env:ROUTEFORGE_PROVIDER_MODE="ollama"
-$env:ROUTEFORGE_OLLAMA_ECONOMY_MODEL="llama3.2:latest"
-$env:ROUTEFORGE_OLLAMA_QUALITY_MODEL="llama3.2:latest"
+> **The cheapest model is useful only when it is eligible, available, affordable for the team, and good enough for the feature.**
 
-uv run uvicorn routeforge.gateway.app:create_app --factory
-```
-
-### Deterministic Evaluator Limitations
-Profiles are offline-generated from 35 fixed benchmark test cases covering classification, structured extraction, JSON generation, summarization, grounded Q&A, and reasoning. Model profiles require explicit manual activation; the running gateway never modifies active profile files at runtime.
-
-## Sampled Asynchronous Quality Verification (M6.1)
-
-RouteForge supports policy-controlled, asynchronous quality verification for deterministic features (e.g. `classification` and `structured-extraction`).
-
-### Asynchronous Flow & Sampling
-1. **Response Path**: The client submits an inference request and receives the selected model's response immediately without added latency.
-2. **Deterministic Sampling**: The gateway evaluates pure SHA-256 bucket sampling (`should_sample_verification`) over `request_id`, `policy_id`, and `policy_version` modulo 10,000 basis points.
-3. **Queue Publication**: For sampled requests where `selected_model_id != reference_model_id`, job payloads are published to Redis Stream (`routeforge:quality-verification:v1`) with `MAXLEN ~ 1000` and a `QUEUED` record is written to PostgreSQL (`quality_verifications`).
-4. **Reference Skip**: If `selected_model_id == reference_model_id`, the call is skipped with reason `REFERENCE_MODEL_ALREADY_USED` and no background call is made.
-
-### Comparison Strategies
-* **`NORMALIZED_EXACT`**: Text normalization (Unicode NFC, line endings, whitespace trimming, optional case folding). Score is 1.0 on exact match, 0.0 otherwise.
-* **`JSON_FIELD_AGREEMENT`**: Parses root JSON objects, recursively flattens leaf paths, compares values using exact decimal semantics, and calculates matching leaf paths divided by total unioned leaf paths.
-
-### Verification Worker
-Run the background worker to consume stream entries, execute the fixed reference model, evaluate comparison strategies, and record outcomes in PostgreSQL:
-```bash
-# Continuous background consumption
-uv run python -m routeforge.verification.worker --consumer-name worker-1
-
-# Single-job dry run
-uv run python -m routeforge.verification.worker --once
-```
-
-### Cost Accounting & Endpoint
-* Verification cost is recorded as control-plane QA overhead (`reference_cost_source = "configured-model-pricing-v1"`) and is **not** charged against the team's inference budget.
-* Retrieval: `GET /v1/routing-decisions/{request_id}` returns a `verification` summary object when present.
-* Summary: `GET /v1/quality-summary` returns calendar-month statistics (eligible requests, sampled, completed, passed, failed, pass rate, total reference tokens, total verification cost) for the authenticated team.
-
-## Documentation Links
-
-* [Implementation Contract (AGENTS.md)](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/AGENTS.md)
-* [Milestone Roadmap (ROADMAP.md)](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/ROADMAP.md)
-* [Current Repository State (CURRENT_STATE.md)](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/CURRENT_STATE.md)
-* [Milestone M1 Specification](file:///c:/Users/Admin/.gemini/antigravity-ide/scratch/RouteForge/docs/milestones/M01-foundation.md)
+RouteForge makes that decision explicit.
